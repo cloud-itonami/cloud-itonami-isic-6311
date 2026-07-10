@@ -42,7 +42,24 @@
    3 {:label "supervised-auto"  :writes #{:quote/ingest :series/derive :correction/request}
                                  :auto #{:quote/ingest :series/derive}}})
 
-(def default-phase 3)
+(def default-phase
+  "The phase used when `context` carries no :phase at all
+  (marketdata.operation: (:phase context phase/default-phase)), AND the
+  fallback `gate` itself uses for an unrecognized phase NUMBER
+  (`(get phases phase (get phases default-phase))`). This is directly
+  reachable by any ordinary caller that simply omits :phase -- not just
+  malformed/malicious input -- so it must be the MOST CONSERVATIVE
+  phase, never the most permissive. This was 3 (supervised-auto, where
+  :quote/ingest and :series/derive can auto-commit) until a live check
+  confirmed a caller who forgets :phase silently got maximum autonomy
+  instead of the safe default -- the same accidental-fail-open shape
+  already found and fixed this session in the shared talent.phase
+  template (gftd-talent-actor) and its many siblings across
+  kotoba-lang/etzhayyim. 1 (assisted-ingest, :auto empty) matches those
+  fixes. :correction/request remains unaffected either way (never in
+  any phase's :auto set -- a data-quality dispute always reaches a
+  human)."
+  1)
 
 (defn gate
   "Adjust a governor disposition for the rollout phase. Returns

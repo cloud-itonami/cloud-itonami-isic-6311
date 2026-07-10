@@ -17,6 +17,15 @@
 
 (def operator {:actor-id "op-1" :actor-role :feed-operator})
 (def officer  {:actor-id "qo-1" :actor-role :data-quality-officer})
+;; default-phase is now 1 (assisted, no auto-commit -- see phase.cljc's
+;; default-phase docstring for why). Tests that specifically exercise
+;; governor-clean auto-commit/escalate behavior opt into phase 3 (or, for
+;; correction/request, phase 2+ where it first enters :writes) explicitly,
+;; the same way phase_test.clj parameterizes phase -- they are not testing
+;; "what happens with no :phase set" (that is missing-phase-context-does-
+;; not-grant-max-autonomy's job, in phase_test.clj).
+(def operator-p3 (assoc operator :phase 3))
+(def officer-p3  (assoc officer :phase 3))
 
 (defn- exec-op [actor tid request context]
   (g/run* actor {:request request :context context} {:thread-id tid}))
@@ -27,7 +36,7 @@
                   {:op :quote/ingest :subject "fx-100" :instrument-id "fx-100"
                    :price 157.40M :currency :jpy :as-of "2026-07-10T12:00:00Z"
                    :source {:class :central-bank-reference-rate :ref "ecb-fx-reference-rates:usd-jpy"}}
-                  operator)]
+                  operator-p3)]
     (is (= :commit (get-in res [:state :disposition])))
     (is (= 157.40M (:price (store/quote* db "fx-100"))) "SSoT actually updated")
     (is (= 1 (count (store/ledger db))))
@@ -141,7 +150,7 @@
           before (store/quote* db "eq-100")
           r1 (exec-op actor "t9"
                    {:op :correction/request :subject "eq-100" :disputed-field :price :claim 142.75M}
-                   officer)]
+                   officer-p3)]
       (is (= :interrupted (:status r1)))
       (is (= :data-quality-dispute (-> r1 :state :audit last :reason)))
       (testing "approve → commit applies the correction"
@@ -153,7 +162,7 @@
         (let [[db2 actor2] (fresh)
               _  (exec-op actor2 "t10"
                       {:op :correction/request :subject "eq-100" :disputed-field :price :claim 142.75M}
-                      officer)
+                      officer-p3)
               r3 (g/run* actor2 {:approval {:status :rejected :by "quality-1"}}
                         {:thread-id "t10" :resume? true})]
           (is (= :hold (get-in r3 [:state :disposition])))
@@ -165,7 +174,7 @@
       (exec-op actor "a" {:op :quote/ingest :subject "fx-100" :instrument-id "fx-100"
                           :price 157.40M :currency :jpy :as-of "2026-07-10T12:00:00Z"
                           :source {:class :central-bank-reference-rate :ref "demo"}}
-               operator)
+               operator-p3)
       (exec-op actor "b" {:op :quote/ingest :subject "eq-100" :instrument-id "eq-100"
                           :price 143.00M :currency :usd :as-of "2026-07-10T12:00:00Z"
                           :source nil :unsourced? true}

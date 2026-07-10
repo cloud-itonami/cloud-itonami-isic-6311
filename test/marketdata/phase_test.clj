@@ -54,6 +54,21 @@
     (is (= :interrupted (:status res)))
     (is (= :phase-approval (-> res :state :audit last :reason)))))
 
+(deftest missing-phase-context-does-not-grant-max-autonomy
+  ;; default-phase is the fallback both when :phase is entirely absent
+  ;; from context (marketdata.operation) and when an unrecognized phase
+  ;; number is passed (phase/gate). It used to be 3 -- where a clean
+  ;; :quote/ingest can auto-commit -- so a caller that simply forgot to
+  ;; set :phase silently got MAXIMUM autonomy instead of the safe
+  ;; "start narrow" default.
+  (testing "omitting :phase from context still requires human approval on a clean ingest"
+    (let [s (store/seed-db)
+          actor (op/build s)
+          res (g/run* actor {:request clean-ingest :context operator} {:thread-id "mp"})]
+      (is (not= :commit (get-in res [:state :disposition]))
+          "a clean ingest must not auto-commit when :phase is unset")
+      (is (= 157.32M (:price (store/quote* s "fx-100"))) "SSoT untouched without explicit phase"))))
+
 (deftest phase3-auto-commits-clean-ingest
   (let [[s res] (run 3 clean-ingest operator)]
     (is (= :commit (get-in res [:state :disposition])))
