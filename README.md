@@ -100,6 +100,28 @@ clojure -M:dev:run    # 6-operation demo through one OperationActor
 clojure -M:lint
 ```
 
+## Real feeds (`marketdata.feed`)
+
+`src/marketdata/feed.cljc` is the "operator wires a real feed" seam this
+README gestures at above: live HTTP connectors for the 3 free/official R0
+catalog sources — ECB euro FX reference rates (no key), US EIA Open Data,
+FRED Case-Shiller HPI (the latter two need a free API key). Every
+`fetch-*` fn does the I/O + parse and hands back a request already shaped
+for `marketdata.operation/build` — it still goes through the full
+MarketDataGovernor (tolerance-gate, source-provenance-gate, ...) exactly
+like a hand-built request does. JVM-only (`clojure.xml`/http-kit/jsonista,
+same seam as `langchain.jvm`); those deps live only in the `:test`/`:feed`
+aliases, never `:deps`.
+
+```bash
+clojure -M:feed:dev:run-feed                                   # ECB only (no key)
+EIA_API_KEY=... FRED_API_KEY=... clojure -M:feed:dev:run-feed  # all 3
+```
+
+Equities/crypto/most commodities still require an operator-registered
+`feed-license` — `marketdata.feed` does not (and cannot) supply a free live
+feed for those asset classes; see `docs/operator-guide.md`.
+
 ## Non-Negotiables
 
 - Do not commit real instrument prints or real feed-license credentials.

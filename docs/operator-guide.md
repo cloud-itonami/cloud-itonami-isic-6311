@@ -32,6 +32,15 @@ citation (a real catalog source or a real, active feed-license).
   `marketdata.facts/catalog` honestly for free/official sources — never
   fabricate one — and register real `feed-license` records for licensed
   exchange/broker/vendor feeds)
+- wire the 3 free/official sources for real via `src/marketdata/feed.cljc`
+  (ECB FX needs no key; EIA/FRED need a free registered API key). Run
+  `clojure -M:feed:dev:run-feed` (with `EIA_API_KEY`/`FRED_API_KEY` set) as
+  a live smoke test — it pushes each fetched quote through the real
+  `OperationActor`, so a malformed/stale live response still gets caught
+  by the same tolerance-gate/source-provenance-gate as any other request.
+  For equities/crypto/most commodities, no free feed exists — you must
+  register a `feed-license` and point `marketdata.feed`'s pattern (or your
+  own connector) at your licensed vendor
 - configure Datomic Local, kotoba-server or an equivalent durable SSoT
 - configure the LLM adapter through environment variables or secret manager
 - define subscriber contract tenants/tiers and RBAC rules

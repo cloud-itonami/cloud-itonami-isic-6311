@@ -42,8 +42,14 @@
 (defn -main [& _]
   (let [db    (store/seed-db)
         actor (op/build db)
-        operator {:actor-id "op-1" :actor-role :feed-operator}
-        officer  {:actor-id "qo-1" :actor-role :data-quality-officer}]
+        ;; :phase 3 (supervised-auto) explicitly -- default-phase is 1
+        ;; (assisted, no auto-commit, see phase.cljc's docstring) so this
+        ;; demo can showcase the full governed contract end to end
+        ;; (op1's auto-commit, op5's phase-enabled human escalation)
+        ;; rather than the conservative default every new deployment
+        ;; actually starts at.
+        operator {:actor-id "op-1" :actor-role :feed-operator :phase 3}
+        officer  {:actor-id "qo-1" :actor-role :data-quality-officer :phase 3}]
 
     (line "── R0 出典カバレッジ(正直な現状) ──")
     (line (pr-str (facts/coverage)))
