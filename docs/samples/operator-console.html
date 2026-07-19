@@ -1,0 +1,70 @@
+<html><head><meta charset="utf-8"><title>cloud-itonami-isic-6311 &middot; market-data operations</title><style>
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ok { color: #137a3f; }
+body { font-family: system-ui,-apple-system,sans-serif; margin: 0; color: #1a1a1a; background: #fafafa; }
+header.bar { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #e5e5e5; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
+h2 { margin-top: 0; font-size: 15px; }
+.warn { color: #b25c00; background: #fff8e1; padding: 2px 6px; border-radius: 4px; }
+main { max-width: 980px; margin: 24px auto; padding: 0 20px; }
+header.bar h1 { font-size: 18px; margin: 0; font-weight: 600; }
+.muted { color: #888; font-size: 13px; }
+.critical { color: #fff; background: #b3261e; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+.card { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.err { color: #b3261e; background: #fbe9e7; padding: 2px 6px; border-radius: 4px; }
+th { font-weight: 600; color: #555; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+header.bar .badge { margin-left: auto; font-size: 12px; color: #666; }
+code { font-size: 12px; background: #f4f4f4; padding: 1px 4px; border-radius: 3px; }
+</style></head><body>
+<header class="bar">
+  <h1>Market-data operations (ISIC 6311) — Operator Console</h1>
+  <span class="badge">read-only sample · governor-gated · never routes orders, custody or trade execution</span>
+</header>
+<main>
+  <section class="card">
+    <h2>Instruments</h2>
+    <p class="muted">Demo snapshot — build-time-generated from <code>marketdata.store</code> via <code>marketdata.render-html</code> (<code>clojure -M:dev:render-html</code>), regenerated nightly.</p>
+    <table>
+      <thead><tr><th>Instrument</th><th>Symbol</th><th>Asset class</th><th>Venue</th><th>Trading status</th><th>Last op status</th></tr></thead>
+      <tbody>
+        <tr><td>cm-100</td><td>WTI</td><td>commodity</td><td>DEMO-NYMEX</td><td><span class="ok">trading</span></td><td><span class="muted">no activity</span></td></tr>
+        <tr><td>cr-100</td><td>BTC/USD</td><td>crypto</td><td>DEMO-VENDOR</td><td><span class="ok">trading</span></td><td><span class="critical">HARD hold &middot; tolerance-gate</span></td></tr>
+        <tr><td>eq-100</td><td>DEMOA</td><td>equity</td><td>DEMO-NASDAQ</td><td><span class="ok">trading</span></td><td><span class="critical">HARD hold &middot; licensed-disclosure</span></td></tr>
+        <tr><td>eq-200</td><td>DEMOB</td><td>equity</td><td>DEMO-NYSE</td><td><span class="critical">halted &middot; circuit-breaker</span></td><td><span class="ok">committed</span></td></tr>
+        <tr><td>fx-100</td><td>USD/JPY</td><td>fx</td><td>ECB-REF</td><td><span class="ok">trading</span></td><td><span class="ok">committed</span></td></tr>
+        <tr><td>re-100</td><td>CSUSHPINSA</td><td>real-estate-index</td><td>FRED</td><td><span class="ok">trading</span></td><td><span class="ok">committed</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h2>Action gate (MarketDataGovernor)</h2>
+    <p class="muted">HARD holds (rbac / tolerance-gate / source-provenance-gate / licensed-disclosure) cannot be overridden. Ingested prices are checked against the last known-good quote; provenance is verified against a closed source-class catalog plus, for licensed feeds, an active feed-license; disclosures never exceed the caller's licensed contract tier.</p>
+    <table>
+      <thead><tr><th>Op</th><th>Gate</th></tr></thead>
+      <tbody>
+        <tr><td><code>:quote/ingest</code></td><td><span class="ok">phase-3 auto-commit when clean</span> &middot; tolerance-gate + source-provenance-gate enforced; halted/circuit-broken instrument ALWAYS escalates regardless of confidence</td></tr>
+        <tr><td><code>:series/derive</code></td><td><span class="ok">phase-3 auto-commit when clean</span> &middot; source-provenance-gate enforced</td></tr>
+        <tr><td><code>:disclosure/query</code></td><td><span class="warn">governed read, not phase-gated</span> &middot; licensed-disclosure: active subscriber contract required, tier column ceiling enforced</td></tr>
+        <tr><td><code>:correction/request</code></td><td><span class="warn">ALWAYS human review</span> &middot; never auto, any phase, any confidence</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <h2>Audit ledger (this run)</h2>
+    <p class="muted">Append-only decision-fact log — every proposal, hold and commit this scenario produced.</p>
+    <table>
+      <thead><tr><th>Fact</th><th>Op</th><th>Instrument / subject</th><th>Basis</th></tr></thead>
+      <tbody>
+        <tr><td>committed</td><td><code>ingest</code></td><td>fx-100</td><td>instrument-id, price, currency, as-of</td></tr>
+        <tr><td>committed</td><td><code>derive</code></td><td>re-100</td><td>series-id, instrument-id, bars</td></tr>
+        <tr><td>committed</td><td><code>ingest</code></td><td>eq-200</td><td>instrument-id, price, currency, as-of</td></tr>
+        <tr><td>committed</td><td><code>request</code></td><td>eq-100</td><td>price</td></tr>
+        <tr><td>policy-hold</td><td><code>ingest</code></td><td>eq-100</td><td>source-provenance-gate</td></tr>
+        <tr><td>policy-hold</td><td><code>query</code></td><td>eq-100</td><td>licensed-disclosure</td></tr>
+        <tr><td>policy-hold</td><td><code>query</code></td><td>eq-100</td><td>licensed-disclosure</td></tr>
+        <tr><td>policy-hold</td><td><code>ingest</code></td><td>cr-100</td><td>tolerance-gate</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+</body></html>
