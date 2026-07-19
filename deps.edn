@@ -12,6 +12,8 @@
          {:local/root "../../kotoba-lang/langchain"}}}
   ;; clojure -M:dev:run  → drive the demo through one OperationActor
   :run {:main-opts ["-m" "marketdata.sim"]}
+  ;; clojure -M:dev:render-html → build-time docs/samples/operator-console.html
+  :render-html {:main-opts ["-m" "marketdata.render-html"]}
   ;; http-kit/jsonista live ONLY here (not :deps) -- marketdata.feed's
   ;; live-fetch fns are JVM-only (#?(:clj ...)), same zero-dep-core
   ;; discipline as langchain.jvm (org.httpkit.client + jsonista.core,
