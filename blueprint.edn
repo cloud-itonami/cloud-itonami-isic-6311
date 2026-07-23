@@ -1,0 +1,27 @@
+{:itonami.blueprint/id "cloud-itonami-isic-6311"
+ :itonami.blueprint/name "Data processing, hosting and related activities — multi-asset market-data aggregation and hosting"
+ :itonami.blueprint/isic-rev4 "6311"
+ :itonami.blueprint/domain :finance/market-data
+ :itonami.blueprint/license "AGPL-3.0-or-later"
+ :itonami.blueprint/social-impact [:market-data-integrity :feed-license-compliance :disclosure-tier-compliance]
+ :itonami.blueprint/governor :marketdata-governor
+ :itonami.blueprint/robotics false
+ :itonami.blueprint/required-technologies [:identity :audit-ledger]
+ :itonami.blueprint/status :public-oss
+ :itonami.blueprint/maturity :implemented
+ :itonami.blueprint/implemented-slice
+ "MarketData-LLM ⊣ MarketDataGovernor (marketdata.policy, seven checks:
+  rbac · tolerance-gate (fat-finger/stale-feed defense) ·
+  source-provenance-gate (licensed-operator-feed requires an ACTIVE,
+  asset-class-covering feed-license) · licensed-disclosure ·
+  confidence-floor · halted-instrument-gate (always escalate, any
+  confidence) · correction-requests-never-auto-resolve), langgraph
+  StateGraph (marketdata.operation), append-only audit ledger
+  (marketdata.store/ledger + append-ledger!). Covers five asset classes
+  (equities, FX, commodities, crypto, real-estate indices). A phase 0→3
+  staged-autonomy gate (marketdata.phase) sits on top of the governor
+  and can only narrow, never widen, what the governor already allowed.
+  46 tests / 177 assertions green (`clojure -M:dev:test`), demo
+  runnable end-to-end (`clojure -M:dev:run`). This is the market-data
+  layer cross-referenced by cloud-itonami-isic-6312's
+  portal.marketdata-bridge integration."}
