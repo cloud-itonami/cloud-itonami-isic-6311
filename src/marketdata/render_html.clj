@@ -29,7 +29,8 @@
 
   Usage: `clojure -M:dev:render-html [out-file]`
   (default `docs/samples/operator-console.html`)."
-  (:require [clojure.string :as str]
+  (:require [jp-go-dds.skin]
+            [clojure.string :as str]
             [marketdata.store :as store]
             [marketdata.operation :as op]
             [langgraph.graph :as g]))
@@ -176,24 +177,9 @@
         instrument-rows (str/join "\n" (map (partial instrument-row ledger) instruments))
         ledger-rows (str/join "\n" (map ledger-row ledger))]
     (str
-     "<html><head><meta charset=\"utf-8\"><title>cloud-itonami-isic-6311 &middot; market-data operations</title><style>\n"
-     "table { width: 100%; border-collapse: collapse; font-size: 14px; }\n"
-     ".ok { color: #137a3f; }\n"
-     "body { font-family: system-ui,-apple-system,sans-serif; margin: 0; color: #1a1a1a; background: #fafafa; }\n"
-     "header.bar { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #e5e5e5; }\n"
-     "th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }\n"
-     "h2 { margin-top: 0; font-size: 15px; }\n"
-     ".warn { color: #b25c00; background: #fff8e1; padding: 2px 6px; border-radius: 4px; }\n"
-     "main { max-width: 980px; margin: 24px auto; padding: 0 20px; }\n"
-     "header.bar h1 { font-size: 18px; margin: 0; font-weight: 600; }\n"
-     ".muted { color: #888; font-size: 13px; }\n"
-     ".critical { color: #fff; background: #b3261e; padding: 2px 6px; border-radius: 4px; font-weight: 600; }\n"
-     ".card { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 16px; margin-bottom: 16px; }\n"
-     ".err { color: #b3261e; background: #fbe9e7; padding: 2px 6px; border-radius: 4px; }\n"
-     "th { font-weight: 600; color: #555; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }\n"
-     "header.bar .badge { margin-left: auto; font-size: 12px; color: #666; }\n"
-     "code { font-size: 12px; background: #f4f4f4; padding: 1px 4px; border-radius: 3px; }\n"
-     "</style></head><body>\n"
+     "<html><head><meta charset=\"utf-8\"><title>cloud-itonami-isic-6311 &middot; market-data operations</title><style>"
+   (jp-go-dds.skin/dds+skin)
+   "</style></head><body>\n"
      "<header class=\"bar\">\n"
      "  <h1>Market-data operations (ISIC 6311) — Operator Console</h1>\n"
      "  <span class=\"badge\">read-only sample · governor-gated · never routes orders, custody or trade execution</span>\n"
