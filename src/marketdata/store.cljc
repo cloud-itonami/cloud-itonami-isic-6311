@@ -54,7 +54,19 @@
   no real instrument print is ever asserted by this repository. `eq-200`
   carries a demo `:status :halted`/`:circuit-breaker?` flag purely to
   exercise the halted-instrument governor gate — it is not a claim about any
-  real security."
+  real security.
+
+  `cx-btc-usd`/`cx-eth-usd` are the two REAL instruments the direct-venue
+  crypto collector publishes (ADR-2607262100). They are seeded as
+  instrument METADATA ONLY, with no `:quotes` entry: this repository ships
+  no BTC/ETH price of its own, so there is nothing here to mistake for a
+  print. The first real price for them comes from `marketdata.feed`'s live
+  venue reads, aggregated by `marketdata.aggregate`. A consequence worth
+  stating plainly: with no prior quote, the tolerance-gate has nothing to
+  compare the first ingest against — which is exactly why
+  `marketdata.uniswap/check-slot0` (independent tick re-derivation) and
+  `marketdata.aggregate`'s quorum + dispersion refusal exist upstream of
+  it."
   []
   {:instruments
    {"eq-100" {:id "eq-100" :symbol "DEMOA" :asset-class :equity :venue "DEMO-NASDAQ"
@@ -68,7 +80,12 @@
     "cr-100" {:id "cr-100" :symbol "BTC/USD" :asset-class :crypto :venue "DEMO-VENDOR"
               :status :trading :circuit-breaker? false}
     "re-100" {:id "re-100" :symbol "CSUSHPINSA" :asset-class :real-estate-index :venue "FRED"
-              :status :trading :circuit-breaker? false}}
+              :status :trading :circuit-breaker? false}
+    ;; real instruments, metadata only — see this fn's docstring
+    "cx-btc-usd" {:id "cx-btc-usd" :symbol "BTC/USD" :asset-class :crypto :venue "CROSS-VENUE"
+                  :status :trading :circuit-breaker? false}
+    "cx-eth-usd" {:id "cx-eth-usd" :symbol "ETH/USD" :asset-class :crypto :venue "CROSS-VENUE"
+                  :status :trading :circuit-breaker? false}}
    :quotes
    {"eq-100" {:instrument-id "eq-100" :price 142.50M :currency :usd :as-of "2026-07-10T00:00:00Z"
               :source {:class :licensed-operator-feed :ref "lic-demo:eq-100" :license-id "lic-demo"}}

@@ -168,6 +168,117 @@
           (is (= :hold (get-in r3 [:state :disposition])))
           (is (= (:price before) (:price (store/quote* db2 "eq-100")))))))))
 
+;; ── cross-venue composite provenance (ADR-2607262100) ──────────────────
+;; The direct-venue crypto path publishes a DERIVED median. That derivation
+;; is only as sourced as the observations under it, so the governor
+;; re-checks the constituent enumeration itself — these tests are the
+;; contract for that check. Without them, `:cross-venue-composite` would be
+;; a hole through which any number could be published by simply asserting
+;; it was "aggregated".
+
+(defn- constituent [venue ref]
+  {:class :exchange-first-party-public-api :venue venue :ref ref
+   :price 64400M :currency :usd})
+
+(defn- composite-req [constituents]
+  {:op :quote/ingest :subject "cx-btc-usd" :instrument-id "cx-btc-usd"
+   :price 64385.02M :currency :usd :as-of "2026-07-26T13:06:00Z"
+   :source {:class :cross-venue-composite
+            :ref "cross-venue-median:cx-btc-usd:2026-07-26T13:06:00Z"
+            :method :median
+            :constituents constituents}})
+
+(deftest a-well-formed-cross-venue-composite-commits
+  (let [[db actor] (fresh)
+        res (exec-op actor "cx1"
+                     (composite-req [(constituent :binance "binance:BTCUSDT:t")
+                                     (constituent :coinbase "coinbase:BTC-USD:t")
+                                     {:class :dex-onchain-observation :venue :uniswap-v3-wbtc-usdc-030
+                                      :ref "uniswap-v3:1:0x99ac:block-25617151"
+                                      :price 64374.95 :currency :usdc}])
+                     operator-p3)]
+    (is (= :commit (get-in res [:state :disposition])))
+    (is (= 64385.02M (:price (store/quote* db "cx-btc-usd"))))))
+
+(deftest a-composite-below-quorum-is-held
+  (testing "two venues cannot outvote each other — a 2-constituent median is one venue with steps"
+    (let [[db actor] (fresh)
+          res (exec-op actor "cx2"
+                       (composite-req [(constituent :binance "binance:BTCUSDT:t")
+                                       (constituent :coinbase "coinbase:BTC-USD:t")])
+                       operator-p3)]
+      (is (= :hold (get-in res [:state :disposition])))
+      (is (some #{:source-provenance-gate} (-> (store/ledger db) first :basis)))
+      (is (nil? (store/quote* db "cx-btc-usd")) "no print written"))))
+
+(deftest a-composite-hiding-a-licensed-vendor-tick-is-held
+  (testing "a derived label must not launder licensed vendor data into publication"
+    (let [[db actor] (fresh)
+          res (exec-op actor "cx3"
+                       (composite-req [(constituent :binance "binance:BTCUSDT:t")
+                                       (constituent :coinbase "coinbase:BTC-USD:t")
+                                       {:class :licensed-operator-feed :license-id "lic-demo"
+                                        :ref "lic-demo:cx-btc-usd" :venue :vendor}])
+                       operator-p3)]
+      (is (= :hold (get-in res [:state :disposition])))
+      (is (some #{:source-provenance-gate} (-> (store/ledger db) first :basis))))))
+
+(deftest a-composite-of-composites-is-held
+  (testing "nesting would let provenance be diluted one level at a time"
+    (let [[db actor] (fresh)
+          res (exec-op actor "cx4"
+                       (composite-req [(constituent :binance "binance:BTCUSDT:t")
+                                       (constituent :coinbase "coinbase:BTC-USD:t")
+                                       {:class :cross-venue-composite :ref "cross-venue-median:earlier"
+                                        :venue :self}])
+                       operator-p3)]
+      (is (= :hold (get-in res [:state :disposition])))
+      (is (some #{:source-provenance-gate} (-> (store/ledger db) first :basis))))))
+
+(deftest a-composite-counting-one-venue-three-times-is-held
+  (testing "duplicate refs would satisfy a naive quorum count"
+    (let [[db actor] (fresh)
+          res (exec-op actor "cx5"
+                       (composite-req (repeat 3 (constituent :binance "binance:BTCUSDT:t")))
+                       operator-p3)]
+      (is (= :hold (get-in res [:state :disposition])))
+      (is (some #{:source-provenance-gate} (-> (store/ledger db) first :basis))))))
+
+(deftest a-composite-with-a-blank-ref-is-held
+  (testing "an unverifiable constituent is not a constituent"
+    (let [[db actor] (fresh)
+          res (exec-op actor "cx6"
+                       (composite-req [(constituent :binance "binance:BTCUSDT:t")
+                                       (constituent :coinbase "coinbase:BTC-USD:t")
+                                       (constituent :kraken "  ")])
+                       operator-p3)]
+      (is (= :hold (get-in res [:state :disposition])))
+      (is (some #{:source-provenance-gate} (-> (store/ledger db) first :basis))))))
+
+(deftest a-direct-venue-quote-needs-no-feed-license
+  (testing "these are the venues' own public endpoints, not a licensed vendor feed"
+    (let [[db actor] (fresh)
+          res (exec-op actor "cx7"
+                       {:op :quote/ingest :subject "cx-eth-usd" :instrument-id "cx-eth-usd"
+                        :price 1883.54 :currency :usdc :as-of "2026-07-26T13:05:47Z"
+                        :source {:class :dex-onchain-observation
+                                 :ref "uniswap-v3:1:0x88e6:block-25617151"}}
+                       operator-p3)]
+      (is (= :commit (get-in res [:state :disposition])))
+      (is (= 1883.54 (:price (store/quote* db "cx-eth-usd")))))))
+
+(deftest an-aggregator-sourced-price-has-no-class-to-cite
+  (testing "the closed catalog is what structurally keeps CoinMarketCap out"
+    (let [[db actor] (fresh)
+          res (exec-op actor "cx8"
+                       {:op :quote/ingest :subject "cx-btc-usd" :instrument-id "cx-btc-usd"
+                        :price 64400M :currency :usd :as-of "2026-07-26T13:06:00Z"
+                        :source {:class :price-aggregator :ref "coinmarketcap:BTC"}}
+                       operator-p3)]
+      (is (= :hold (get-in res [:state :disposition])))
+      (is (some #{:source-provenance-gate} (-> (store/ledger db) first :basis)))
+      (is (nil? (store/quote* db "cx-btc-usd"))))))
+
 (deftest every-decision-leaves-one-ledger-fact
   (testing "write-only-through-ledger: N operations → N ledger facts"
     (let [[db actor] (fresh)]

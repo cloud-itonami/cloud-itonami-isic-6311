@@ -103,3 +103,69 @@ Operators are responsible for:
 The OSS project provides software and an operating blueprint. It does not
 make an operator compliant by itself, and it does not license or endorse
 redistribution of any specific exchange's or vendor's data.
+
+## 7. Running the direct crypto venues
+
+Crypto is the one asset class this actor collects itself rather than
+leaving to your licensed vendor feed: it reads four exchanges' own public
+endpoints and Uniswap v3 on-chain, then publishes a fail-closed cross-venue
+median (ADR-0002).
+
+```bash
+# CEX legs only — no API key, no account, no aggregator
+clojure -M:feed:dev:run-feed
+
+# with the on-chain Uniswap leg (your node or provider URL — this repo
+# hardcodes none, and reads no credential from env inside the connector)
+ETH_RPC_URL=https://<your-ethereum-node> clojure -M:feed:dev:run-feed
+```
+
+### What you must decide before selling access to it
+
+1. **Redistribution terms, per venue.** Reading a venue's public endpoint
+   is not automatically a right to redistribute it commercially, and the
+   four venues' terms differ from each other and change over time. Check
+   each venue's current terms of use for the endpoints in
+   `marketdata.venues/venues` before including that venue in a paid tier.
+   On-chain state (the Uniswap leg) does not carry this problem — it is
+   public chain data, not a venue's proprietary feed.
+2. **The stablecoin peg.** `:currency-equivalence {:usdt :usd :usdc :usd}`
+   is a real assumption you are making on your subscribers' behalf: it says
+   a USDT print may be published as a dollar price. It is recorded in every
+   constituent's `:conversion`, so it is auditable — but during a depeg it
+   is also wrong. If you would rather not assume it, supply real
+   `:fx-rates` entries instead and the un-convertible venues will simply be
+   excluded.
+3. **Quorum and dispersion.** Defaults are 3 venues and 2%. Raising quorum
+   or tightening dispersion makes the actor publish nothing more often —
+   which is the intended failure mode, not an outage. Do not "fix" a
+   dispersion refusal by enabling `:drop-outliers?` without looking at
+   which venue is the outlier and why.
+4. **Rate limits.** Each venue publishes its own; the collector makes one
+   request per listing per round. Poll frequency is yours to choose, and
+   exceeding a venue's limit degrades your quorum rather than erroring
+   loudly.
+5. **Staleness.** Pass `:now-epoch-seconds` to
+   `marketdata.aggregate/reference-price` to enable the freshness check.
+   Kraken's ticker payload has no venue clock, so its constituent is
+   `:freshness :unknown` — it is stamped with this actor's observation time
+   and labelled `:as-of-source :observed`, never presented as
+   venue-authoritative.
+
+### Adding a venue or a pool
+
+- **CEX**: add a `marketdata.venues/venues` entry (with its published API
+  doc URL), a `marketdata.venues/listings` row with the venue's REAL quote
+  currency, a parser in `marketdata.feed`, and a catalog entry in
+  `marketdata.facts`. A venue in the registry with no parser is caught by a
+  test.
+- **DEX pool**: add a `marketdata.uniswap/pools` entry and then actually
+  run `marketdata.feed-eth/verify-pool!` against a node — it reads
+  `token0()`/`token1()`/`decimals()` from the chain and tells you whether
+  your entry is right. Do not commit a pool entry you have not verified;
+  the wrong `decimals` produces a well-formed price that is wrong by a
+  factor of 10^n.
+- **Never** add a source class for an aggregator (CoinMarketCap, CoinGecko,
+  CryptoCompare, a vendor blend). The closed catalog is what makes this
+  actor's crypto provenance re-derivable, and a test asserts no such class
+  exists.

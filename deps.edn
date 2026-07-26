@@ -30,10 +30,21 @@ io.github.kotoba-lang/langgraph
          :main-opts ["-m" "cognitect.test-runner"]
          :exec-fn cognitect.test-runner.api/test}
   ;; clojure -M:feed:dev:run-feed -- live smoke test against the real ECB/
-  ;; EIA/FRED APIs (needs EIA_API_KEY/FRED_API_KEY env vars for the latter
-  ;; two; ECB needs no key). Not run by :test -- see docs/operator-guide.md.
+  ;; EIA/FRED APIs and the direct crypto venues (needs EIA_API_KEY/
+  ;; FRED_API_KEY for the first two; ECB and all four CEX venues need no
+  ;; key; the Uniswap leg needs ETH_RPC_URL). Not run by :test -- see
+  ;; docs/operator-guide.md.
+  ;;
+  ;; org-ethereum-jsonrpc lives HERE and not in :deps or :test on purpose:
+  ;; only marketdata.feed-eth (the on-chain transport) needs it, nothing
+  ;; under test/ requires that namespace, and CI's `clojure -M:dev:test`
+  ;; job only checks out langgraph/langchain -- so the test path must not
+  ;; depend on a third sibling checkout. The price math it would want to
+  ;; test is pure and lives in marketdata.uniswap, which has no deps.
   :feed {:extra-deps {http-kit/http-kit {:mvn/version "2.8.0"}
-                      metosin/jsonista  {:mvn/version "0.3.11"}}}
+                      metosin/jsonista  {:mvn/version "0.3.11"}
+                      io.github.kotoba-lang/org-ethereum-jsonrpc
+                      {:local/root "../../kotoba-lang/org-ethereum-jsonrpc"}}}
   :run-feed {:main-opts ["-m" "marketdata.feed-demo"]}
   ;; static analysis — clj-kondo from deps (no binary), errors fail CI.
   :lint {:replace-deps {clj-kondo/clj-kondo {:mvn/version "2024.11.14"}}

@@ -22,7 +22,12 @@
       (is (= "Demo Exchange Data Vendor (fictitious)" (:provider (store/feed-license s "lic-demo"))))
       (is (true? (:active? (store/feed-license s "lic-demo"))))
       (is (false? (:active? (store/feed-license s "lic-expired"))))
-      (is (= 6 (count (store/all-instruments s)))))))
+      (is (= 8 (count (store/all-instruments s)))
+          "6 fictitious demo instruments + the 2 real cross-venue crypto ones")
+      (testing "the real crypto instruments ship with metadata but NO seeded price"
+        (is (= :crypto (:asset-class (store/instrument s "cx-btc-usd"))))
+        (is (nil? (store/quote* s "cx-btc-usd"))
+            "this repository asserts no BTC price of its own — the first one comes from a live venue read")))))
 
 (deftest write-and-ledger-parity
   (doseq [[label s] (backends)]

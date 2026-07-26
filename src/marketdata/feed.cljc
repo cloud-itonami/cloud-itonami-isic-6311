@@ -1,10 +1,20 @@
 (ns marketdata.feed
-  "Real HTTP feed connectors for the 3 free/official R0 catalog sources
-  (`marketdata.facts/catalog`): ECB euro FX reference rates (no key), US
-  EIA Open Data (needs an API key), FRED (needs an API key). This is the
-  'operator wires a real feed' seam the actor's docs gesture at — before
-  this namespace existed, `:quote/ingest` only ever ran against whatever
-  price/source a test or the demo (`marketdata.sim`) handed it directly.
+  "Real HTTP feed connectors for this actor's free/official R0 catalog
+  sources (`marketdata.facts/catalog`): ECB euro FX reference rates (no
+  key), US EIA Open Data (needs an API key), FRED (needs an API key), and —
+  since ADR-2607262100 — the four crypto venues' OWN first-party public
+  market-data endpoints (Binance, Coinbase Exchange, Kraken, bitFlyer; all
+  keyless). The on-chain DEX leg lives in `marketdata.feed-eth`. This is
+  the 'operator wires a real feed' seam the actor's docs gesture at —
+  before this namespace existed, `:quote/ingest` only ever ran against
+  whatever price/source a test or the demo (`marketdata.sim`) handed it
+  directly.
+
+  **This actor calls no price aggregator.** Crypto prices are read from
+  each venue directly and combined by `marketdata.aggregate` into a
+  fail-closed median, rather than fetched from CoinMarketCap/CoinGecko/any
+  vendor blend. `marketdata.facts` has no catalog class an aggregated
+  third-party price could even cite.
 
   JVM-only (`#?(:clj ...)`) host-fn layer, same zero-dep-core discipline as
   `langchain.jvm`'s `org.httpkit.client`/`jsonista.core` reference impl:
@@ -34,6 +44,11 @@
   a plain string argument. `marketdata.feed` is a pure injected-credential
   client, same discipline as this workspace's B2 credential resolution."
   (:require [clojure.string :as str]
+            ;; JVM-only like the parsers that use it: the portable half of
+            ;; this namespace (the *-ingest-request shapers, cross-rate)
+            ;; has no venue-registry dependency, and a ClojureScript/nbb
+            ;; caller requires `marketdata.venues` directly.
+            #?(:clj [marketdata.venues :as venues])
             #?(:clj [clojure.xml :as xml])
             #?(:clj [org.httpkit.client :as http])
             #?(:clj [jsonista.core :as j])))
@@ -111,6 +126,182 @@
      (see `ecb-fx-ingest-requests`). No API key required."
      [& [pairs]]
      (-> (get! ecb-fx-url) parse-ecb-fx-xml (ecb-fx-ingest-requests pairs))))
+
+;; ───────────────────────── crypto: direct venue reads ──────────────────
+;; ADR-2607262100. Each venue is read from ITS OWN public market-data
+;; endpoint (`marketdata.venues`), never from a price aggregator; the DEX
+;; leg is read from chain state in `marketdata.feed-eth`. The parse fns
+;; below are JVM-only (jsonista) like every other parser here; the shaping
+;; into `:quote/ingest` lives in the portable `marketdata.venues`.
+;;
+;; Each parser returns `{:price :as-of :as-of-source :epoch-seconds :bid
+;; :ask :volume}` or nil. nil means "this venue gave us no usable price
+;; right now" (down, halted, unexpected shape) — never a zero/placeholder
+;; price, because `marketdata.aggregate` treats a missing venue as a
+;; missing venue (quorum shrinks, and below `:min-venues` nothing is
+;; published at all) whereas a zero would poison the median.
+
+#?(:clj
+   (defn- ->epoch-seconds
+     "java.time.Instant -> epoch seconds (long)."
+     [^java.time.Instant inst]
+     (.getEpochSecond inst)))
+
+#?(:clj
+   (defn observed-now
+     "This actor's own observation time, for venues whose payload carries no
+     clock (Kraken). Returned separately from a venue timestamp and tagged
+     `:as-of-source :observed` so the distinction survives into the
+     published provenance instead of masquerading as venue-authoritative."
+     []
+     (let [now (java.time.Instant/now)]
+       {:as-of (str now) :epoch-seconds (->epoch-seconds now)
+        :as-of-source :observed})))
+
+#?(:clj
+   (defn parse-binance-24hr
+     "Binance `/api/v3/ticker/24hr` body -> normalized tick. `closeTime` is
+     epoch MILLISECONDS (the venue's own clock)."
+     [json-str]
+     (let [m (json-read json-str)
+           price (some-> (:lastPrice m) bigdec)
+           close-ms (:closeTime m)]
+       (when (and price (pos? price))
+         (let [inst (when (number? close-ms)
+                      (java.time.Instant/ofEpochMilli (long close-ms)))]
+           (cond-> {:price price
+                    :bid (some-> (:bidPrice m) bigdec)
+                    :ask (some-> (:askPrice m) bigdec)
+                    :volume (some-> (:volume m) bigdec)
+                    :as-of-source :venue}
+             inst (assoc :as-of (str inst) :epoch-seconds (->epoch-seconds inst))))))))
+
+#?(:clj
+   (defn parse-coinbase-ticker
+     "Coinbase Exchange `/products/<id>/ticker` body -> normalized tick.
+     `time` is an ISO-8601 instant with nanosecond precision."
+     [json-str]
+     (let [m (json-read json-str)
+           price (some-> (:price m) bigdec)]
+       (when (and price (pos? price))
+         (let [inst (try (some-> (:time m) java.time.Instant/parse)
+                         (catch Exception _ nil))]
+           (cond-> {:price price
+                    :bid (some-> (:bid m) bigdec)
+                    :ask (some-> (:ask m) bigdec)
+                    :volume (some-> (:volume m) bigdec)
+                    :as-of-source :venue}
+             inst (assoc :as-of (str inst) :epoch-seconds (->epoch-seconds inst))))))))
+
+#?(:clj
+   (defn parse-kraken-ticker
+     "Kraken `/0/public/Ticker` body -> normalized tick.
+
+     Two things this parser refuses to paper over: (1) Kraken keys its
+     result by its OWN normalized pair name (`XBTUSD` comes back as
+     `XXBTZUSD`), so rather than hardcoding a translation table from
+     memory, this reads the single entry of a single-pair request — if the
+     response carries anything other than exactly one pair, that is not the
+     request we made and nil is returned. (2) The payload has NO timestamp
+     field at all, so `:as-of` is left nil here and the caller stamps its
+     own observation time (`observed-now`) — this parser never invents
+     one. `error` is checked first: Kraken returns HTTP 200 with a
+     non-empty `error` array for a bad pair."
+     [json-str]
+     (let [m (json-read json-str)
+           errs (:error m)
+           result (:result m)]
+       (when (and (empty? errs) (map? result) (= 1 (count result)))
+         (let [t (val (first result))
+               price (some-> (first (:c t)) bigdec)]
+           (when (and price (pos? price))
+             {:price price
+              :bid (some-> (first (:b t)) bigdec)
+              :ask (some-> (first (:a t)) bigdec)
+              :volume (some-> (second (:v t)) bigdec)   ; 24h volume
+              :as-of nil :as-of-source :observed}))))))
+
+#?(:clj
+   (defn parse-bitflyer-ticker
+     "bitFlyer `/v1/ticker` body -> normalized tick. `state` must be
+     `RUNNING`: bitFlyer publishes `CLOSED`/`STARTING`/`PREOPEN`/
+     `CIRCUIT BREAK` states with a stale `ltp` still attached, and ingesting
+     that last-traded-price as if it were live is precisely the stale-feed
+     failure this actor exists to prevent — so any non-RUNNING state yields
+     nil. `timestamp` is UTC without a zone designator."
+     [json-str]
+     (let [m (json-read json-str)
+           price (:ltp m)]
+       (when (and (= "RUNNING" (:state m)) (number? price) (pos? price))
+         (let [inst (try (some-> (:timestamp m)
+                                 java.time.LocalDateTime/parse
+                                 (.toInstant java.time.ZoneOffset/UTC))
+                         (catch Exception _ nil))]
+           (cond-> {:price (bigdec price)
+                    :bid (some-> (:best_bid m) bigdec)
+                    :ask (some-> (:best_ask m) bigdec)
+                    :volume (some-> (:volume m) bigdec)
+                    :as-of-source :venue}
+             inst (assoc :as-of (str inst) :epoch-seconds (->epoch-seconds inst))))))))
+
+(def venue-parsers
+  "venue id -> parse fn. JVM-only bodies; the map itself is data so
+  `marketdata.venues`' registry stays the single place that says which
+  venues exist."
+  #?(:clj {:binance  parse-binance-24hr
+           :coinbase parse-coinbase-ticker
+           :kraken   parse-kraken-ticker
+           :bitflyer parse-bitflyer-ticker}
+     :cljs {}))
+
+#?(:clj
+   (defn fetch-venue-listing
+     "Live read of ONE venue listing -> a `:quote/ingest` request map, or
+     nil. Never throws on a single venue's failure: a venue being down,
+     rate-limiting or changing shape must degrade the quorum, not abort the
+     whole collection round (the caller then sees fewer constituents and,
+     below `:min-venues`, publishes nothing). Use `fetch-venue-listing*`
+     when you need the failure REASON rather than just its absence."
+     [{:keys [venue venue-symbol] :as listing}]
+     (try
+       (let [parse (get venue-parsers venue)
+             body  (get! (venues/ticker-url venue venue-symbol))
+             tick  (some-> body parse)]
+         (when tick
+           (venues/venue-ingest-request
+            listing
+            (if (:as-of tick) tick (merge tick (observed-now))))))
+       (catch Exception _ nil))))
+
+#?(:clj
+   (defn fetch-venue-listing*
+     "Like `fetch-venue-listing` but returns `{:ok? :request :venue :error}`
+     so a collection round can REPORT which venues failed and why instead of
+     silently shrinking. `marketdata.feed-demo` prints this."
+     [{:keys [venue venue-symbol] :as listing}]
+     (try
+       (let [parse (get venue-parsers venue)
+             body  (get! (venues/ticker-url venue venue-symbol))
+             tick  (some-> body parse)]
+         (if tick
+           (let [req (venues/venue-ingest-request
+                      listing (if (:as-of tick) tick (merge tick (observed-now))))]
+             {:ok? (some? req) :venue venue :request req
+              :error (when-not req :no-usable-price)})
+           {:ok? false :venue venue :error :no-usable-price}))
+       (catch Exception e
+         {:ok? false :venue venue :error (.getMessage e)}))))
+
+#?(:clj
+   (defn fetch-crypto-venues
+     "Live read of EVERY CEX listing for `instrument-id` -> a vector of
+     `:quote/ingest` request maps (one per venue that answered usably).
+     Feed this straight into `marketdata.aggregate/reference-price`; add
+     the DEX leg from `marketdata.feed-eth/fetch-pool-quotes` first if you
+     want the on-chain constituent, which is the configuration this actor
+     documents as its default."
+     [instrument-id]
+     (vec (keep fetch-venue-listing (venues/listings-for instrument-id)))))
 
 ;; ───────────────────────── US EIA Open Data (commodity spot) ───────────
 
