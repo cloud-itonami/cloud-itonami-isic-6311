@@ -9,8 +9,13 @@ sell.
 
 Collects (ingests), holds and updates price/quote data across five asset
 classes — equities, FX, commodities, crypto and real-estate indices — and
-serves it to licensed subscribers under a tiered contract, exactly the
-"operator supplies their own licensed price feed" boundary this workspace's
+serves it to licensed subscribers under a tiered contract. For equities and
+most commodities that means the "operator supplies their own licensed price
+feed" boundary; **for crypto it does not — this actor reads the venues
+themselves** (four exchanges' own public APIs + Uniswap v3 on-chain) and
+publishes a fail-closed cross-venue median, with no aggregator anywhere in
+the path (see *Crypto* below). The licensed-feed boundary is the one this
+workspace's
 [`kotoba-lang/securities`](https://github.com/kotoba-lang/securities) already
 documents (`securities` is the settlement/custody layer; this actor is the
 market-data layer that would feed it). Built on this workspace's
@@ -39,9 +44,12 @@ never holds custody, never executes a trade — there is no field anywhere in
 this schema for order-routing, custody or trade execution (see
 `docs/adr/0001-architecture.md`). Ingested provenance is limited to real,
 citable public reference sources (`src/marketdata/facts.cljc`: ECB FX
-reference rates, US EIA commodity spot data, FRED real-estate index) or an
-operator-registered `:licensed-operator-feed` — every price must resolve to
-one or the other, never a bare "the LLM inferred it".
+reference rates, US EIA commodity spot data, FRED real-estate index), the
+crypto venues' own first-party public endpoints and on-chain pool state, a
+cross-venue median derived from those, or an operator-registered
+`:licensed-operator-feed` — every price must resolve to one of those,
+never a bare "the LLM inferred it" and never a third-party aggregator's
+number.
 
 ## Consuming this actor from another blueprint
 
@@ -104,7 +112,8 @@ clojure -M:lint
 
 `src/marketdata/feed.cljc` is the "operator wires a real feed" seam this
 README gestures at above: live HTTP connectors for the 3 free/official R0
-catalog sources — ECB euro FX reference rates (no key), US EIA Open Data,
+reference sources (plus the crypto venues covered in the next section) —
+ECB euro FX reference rates (no key), US EIA Open Data,
 FRED Case-Shiller HPI (the latter two need a free API key). Every
 `fetch-*` fn does the I/O + parse and hands back a request already shaped
 for `marketdata.operation/build` — it still goes through the full
@@ -118,9 +127,75 @@ clojure -M:feed:dev:run-feed                                   # ECB only (no ke
 EIA_API_KEY=... FRED_API_KEY=... clojure -M:feed:dev:run-feed  # all 3
 ```
 
-Equities/crypto/most commodities still require an operator-registered
+Equities and most commodities still require an operator-registered
 `feed-license` — `marketdata.feed` does not (and cannot) supply a free live
 feed for those asset classes; see `docs/operator-guide.md`.
+
+## Crypto: read the venues directly, never an aggregator
+
+Crypto is the one asset class where the real prices are published by the
+venues themselves, for free, with no license — so this actor reads them
+directly instead of buying (or scraping) an aggregator's blend
+(ADR-2607262100, `docs/adr/0002-direct-venue-crypto-feeds.md`):
+
+| Leg | Source | What is read |
+|---|---|---|
+| CEX | Binance / Coinbase Exchange / Kraken / bitFlyer, each venue's **own** public REST ticker | last price, bid/ask, 24h volume, the venue's own clock |
+| DEX | Uniswap v3 pool contracts on Ethereum mainnet, via `eth_call` | `slot0()` — sqrtPriceX96 + tick, at a specific block |
+
+**There is no CoinMarketCap/CoinGecko/CryptoCompare dependency, and adding
+one would require adding a source class that deliberately does not exist.**
+`marketdata.facts/allowed-source-classes` is a closed set; an aggregated
+third-party price has nothing truthful to cite, so the governor rejects it
+(`policy_contract_test.clj`'s `an-aggregator-sourced-price-has-no-class-to-cite`).
+
+What gets published is a **cross-venue median that fails closed**
+(`marketdata.aggregate`):
+
+- **quorum** — below 3 usable constituents, nothing is published;
+- **dispersion** — if the venues disagree by more than 2%, nothing is
+  published (silent outlier-dropping is opt-in and every dropped venue is
+  recorded in the provenance);
+- **no invented conversions** — Binance quotes USDT, Uniswap quotes USDC,
+  bitFlyer quotes JPY. A quote is converted only under an explicitly
+  declared `:currency-equivalence` (a stated stablecoin-peg assumption,
+  carried into every constituent as `:conversion`) or a real supplied FX
+  rate; otherwise it is *excluded with a reason*, never assumed to be
+  dollars;
+- **median, not volume-weighted** — self-reported volume is the most
+  manipulated field in crypto market data, and the median needs no trust
+  in it.
+
+The published composite enumerates every constituent (venue, its own
+source class, its re-derivable `:ref`, its raw price and the conversion
+applied), and the MarketDataGovernor independently re-checks that
+enumeration — quorum, every constituent a direct-venue observation, no
+nested composites, no duplicate refs — so "it was aggregated" can never
+launder an unsourced price past the gate.
+
+```bash
+# CEX legs only (no key, no RPC endpoint needed)
+clojure -M:feed:dev:run-feed
+# with the on-chain Uniswap leg
+ETH_RPC_URL=https://<your-ethereum-node> clojure -M:feed:dev:run-feed
+```
+
+A real run (2026-07-26T13:23Z, all five venues live):
+
+```
+ cx-btc-usd
+   binance   64507.06 usdt @ 2026-07-26T13:23:39.001Z
+   coinbase  64441.12 usd  @ 2026-07-26T13:23:37.812851997Z
+   kraken    64447.50 usd  @ 2026-07-26T13:23:39.322607Z
+   bitflyer  10565984 jpy  @ 2026-07-26T13:23:36.813Z      ← excluded: no FX rate declared
+   uniswap-v3 64374.955 usdc @ block-25617240
+   => reference 64444.31 usd · n=4 · dispersion=11bp
+```
+
+Every price is re-derivable by the subscriber: a CEX `:ref` is
+`venue:symbol:timestamp` against the same public endpoint, and a DEX `:ref`
+is `chain-id:pool:block`, re-checkable with one `eth_call` against any
+Ethereum node — no trust in this actor required.
 
 ## Non-Negotiables
 

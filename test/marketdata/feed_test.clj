@@ -15,8 +15,10 @@
       -- both APIs require a free registered key to call live, which this
       sandbox does not have; the exact field names/nesting here match the
       publicly documented schema, not an invented one."
-  (:require [clojure.test :refer [deftest is testing]]
-            [marketdata.feed :as feed]))
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
+            [marketdata.feed :as feed]
+            [marketdata.venues :as venues]))
 
 (def ecb-fx-fixture
   "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
@@ -137,3 +139,73 @@
 (deftest fred-observations-url-embeds-key-and-series
   (is (re-find #"series_id=CSUSHPINSA" (feed/fred-observations-url "demo-key")))
   (is (re-find #"api_key=demo-key" (feed/fred-observations-url "demo-key"))))
+
+;; ───────────────────── crypto venues (ADR-2607262100) ──────────────────
+;; All four fixtures below are REAL response bodies, captured live within
+;; the same ~4-second window on 2026-07-26T13:05Z during development of
+;; this connector (`curl` against each venue's own public endpoint). They
+;; are byte-for-byte what the venues returned — not a schema written from
+;; memory — which is also why the four prices agree to ~8bp: they are one
+;; real simultaneous market snapshot, and `marketdata.aggregate-test`
+;; reuses exactly these numbers.
+
+(def binance-24hr-fixture
+  "{\"symbol\":\"BTCUSDT\",\"priceChange\":\"298.64000000\",\"priceChangePercent\":\"0.466\",\"weightedAvgPrice\":\"64404.44355540\",\"prevClosePrice\":\"64126.00000000\",\"lastPrice\":\"64424.64000000\",\"lastQty\":\"0.00061000\",\"bidPrice\":\"64424.63000000\",\"bidQty\":\"3.35145000\",\"askPrice\":\"64424.64000000\",\"askQty\":\"0.84347000\",\"openPrice\":\"64126.00000000\",\"highPrice\":\"64662.99000000\",\"lowPrice\":\"64106.74000000\",\"volume\":\"6200.98392000\",\"quoteVolume\":\"399370918.86355570\",\"openTime\":1784984751013,\"closeTime\":1785071151013,\"firstId\":6533397648,\"lastId\":6534262346,\"count\":864699}")
+
+(def coinbase-ticker-fixture
+  "{\"ask\":\"64372.22\",\"bid\":\"64372.21\",\"volume\":\"1821.87214427\",\"trade_id\":1062403639,\"price\":\"64372.21\",\"size\":\"0.00571275\",\"time\":\"2026-07-26T13:05:51.234745517Z\",\"rfq_volume\":\"24.795539\"}")
+
+(def kraken-ticker-fixture
+  "{\"error\":[],\"result\":{\"XXBTZUSD\":{\"a\":[\"64395.10000\",\"9\",\"9.000\"],\"b\":[\"64395.00000\",\"1\",\"1.000\"],\"c\":[\"64395.10000\",\"0.00015150\"],\"v\":[\"211.25271021\",\"411.15151866\"],\"p\":[\"64409.69609\",\"64323.99965\"],\"t\":[12099,24375],\"l\":[\"64230.90000\",\"64053.20000\"],\"h\":[\"64595.90000\",\"64595.90000\"],\"o\":\"64312.90000\"}}}")
+
+(def bitflyer-ticker-fixture
+  "{\"product_code\":\"BTC_JPY\",\"state\":\"RUNNING\",\"timestamp\":\"2026-07-26T13:05:47.343\",\"tick_id\":24182087,\"best_bid\":10551546.0,\"best_ask\":10554414.0,\"best_bid_size\":0.00116611,\"best_ask_size\":0.00486973,\"total_bid_depth\":157.42744025,\"total_ask_depth\":97.03880255,\"market_bid_size\":0.0,\"market_ask_size\":0.0,\"ltp\":10554414.0,\"volume\":338.31543896,\"volume_by_product\":42.57775134}")
+
+(deftest parse-binance-24hr-uses-last-price-and-the-venues-own-clock
+  (let [t (feed/parse-binance-24hr binance-24hr-fixture)]
+    (is (= 64424.64M (:price t)))
+    (is (= 64424.63M (:bid t)))
+    (is (= 6200.98392M (:volume t)))
+    (is (= :venue (:as-of-source t)))
+    (is (= 1785071151 (:epoch-seconds t)) "closeTime is epoch MILLIseconds")
+    (is (= "2026-07-26T13:05:51.013Z" (:as-of t)))))
+
+(deftest parse-coinbase-ticker-handles-nanosecond-timestamps
+  (let [t (feed/parse-coinbase-ticker coinbase-ticker-fixture)]
+    (is (= 64372.21M (:price t)))
+    (is (= 64372.22M (:ask t)))
+    (is (= :venue (:as-of-source t)))
+    (is (= 1785071151 (:epoch-seconds t)))))
+
+(deftest parse-kraken-ticker-reads-the-single-pair-without-a-name-table
+  (testing "Kraken renames XBTUSD to XXBTZUSD; the parser reads the one entry it asked for"
+    (let [t (feed/parse-kraken-ticker kraken-ticker-fixture)]
+      (is (= 64395.10M (:price t)) "c[0] is the last trade price")
+      (is (= 64395.00M (:bid t)))
+      (is (= 411.15151866M (:volume t)) "v[1] is the 24h volume")))
+  (testing "no timestamp exists in this payload — the parser refuses to invent one"
+    (let [t (feed/parse-kraken-ticker kraken-ticker-fixture)]
+      (is (nil? (:as-of t)))
+      (is (= :observed (:as-of-source t))))))
+
+(deftest parse-kraken-ticker-fails-closed-on-an-error-or-multi-pair-body
+  (is (nil? (feed/parse-kraken-ticker "{\"error\":[\"EQuery:Unknown asset pair\"],\"result\":{}}")))
+  (is (nil? (feed/parse-kraken-ticker "{\"error\":[],\"result\":{}}")))
+  (is (nil? (feed/parse-kraken-ticker
+             "{\"error\":[],\"result\":{\"A\":{\"c\":[\"1\"]},\"B\":{\"c\":[\"2\"]}}}"))
+      "a two-pair body is not the single-pair request we made"))
+
+(deftest parse-bitflyer-ticker-refuses-a-non-running-market
+  (let [t (feed/parse-bitflyer-ticker bitflyer-ticker-fixture)]
+    (is (= 10554414M (:price t)))
+    (is (= :venue (:as-of-source t)))
+    (is (= 1785071147 (:epoch-seconds t)) "timestamp is UTC without a zone designator"))
+  (testing "a halted/closed market still carries a stale ltp — ingesting it is the bug"
+    (is (nil? (feed/parse-bitflyer-ticker
+               (str/replace bitflyer-ticker-fixture "RUNNING" "CLOSED"))))
+    (is (nil? (feed/parse-bitflyer-ticker
+               (str/replace bitflyer-ticker-fixture "RUNNING" "CIRCUIT BREAK"))))))
+
+(deftest every-registered-venue-has-a-parser
+  (is (= (set (map :id venues/venues)) (set (keys feed/venue-parsers)))
+      "a venue in the registry with no parser would silently never contribute"))

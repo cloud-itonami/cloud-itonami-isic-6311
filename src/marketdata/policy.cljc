@@ -19,7 +19,10 @@
     3. source-provenance-gate — does the quote/series cite an allowed
                                 provenance class, and — for
                                 `:licensed-operator-feed` — an ACTIVE,
-                                asset-class-covering feed-license?
+                                asset-class-covering feed-license, or —
+                                for `:cross-venue-composite` — a valid
+                                constituent enumeration (quorum, all
+                                direct-venue classes, distinct refs)?
     4. licensed-disclosure    — is there an active subscriber contract, and
                                 does the requested column set stay within
                                 its tier?
@@ -86,10 +89,20 @@
 (defn- source-provenance-violations
   "Only `:quote/ingest` and `:series/derive` assert new provenance, so only
   those two ops are checked here. A missing source, a `:class` outside
-  `marketdata.facts/allowed-source-classes`, or a `:licensed-operator-feed`
+  `marketdata.facts/allowed-source-classes`, a `:licensed-operator-feed`
   citation whose `:license-id` does not resolve to an ACTIVE feed-license
-  covering the instrument's asset-class, is a HARD rejection regardless of
-  the LLM's stated confidence."
+  covering the instrument's asset-class, or a `:cross-venue-composite`
+  citation with an invalid constituent enumeration, is a HARD rejection
+  regardless of the LLM's stated confidence.
+
+  The composite branch (ADR-2607262100) is what keeps the direct-venue
+  crypto path from becoming a provenance-laundering hole: a derived median
+  is only as sourced as the observations under it, so the governor
+  re-checks the enumeration itself (quorum, every constituent a kind-3
+  direct-venue class, distinct non-blank refs) rather than trusting that
+  whoever built the composite aggregated honestly. A composite that cites
+  an aggregator, a licensed vendor tick, another composite, or the same
+  venue three times is rejected here, not merely discouraged upstream."
   [{:keys [op]} proposal st]
   (when (contains? #{:quote/ingest :series/derive} op)
     (let [src (:source proposal)
@@ -107,6 +120,14 @@
             [{:rule :source-provenance-gate
               :detail (str "有効な feed-license が無いかアセットクラス対象外: "
                            "license-id=" (:license-id src) " asset-class=" (:asset-class inst))}]))
+
+        (facts/composite-class? (:class src))
+        (when-not (facts/composite-constituents-ok? src)
+          [{:rule :source-provenance-gate
+            :detail (str "cross-venue-composite の構成要素が不正 "
+                         "(最低 " facts/min-composite-constituents " 件・"
+                         "全て direct-venue クラス・ref が非空かつ重複なし): "
+                         (pr-str (mapv #(select-keys % [:class :ref]) (:constituents src))))}])
 
         :else nil))))
 
