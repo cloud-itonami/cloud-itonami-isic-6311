@@ -86,6 +86,57 @@ Operators can sell:
 | Pro tier | trading desk / valuation team | monthly platform fee |
 | Institutional tier | quant/analytics team | monthly fee + usage |
 | Fleet wholesale | other cloud-itonami operators | API metering |
+| Managed Starter | one tenant, small fintech/retail-app builder (3–5 seats) | ¥25,000/月 flat |
+
+**Market-anchored (2026-08-10)**: benchmarked against 6 real competitor
+products in the market-data aggregation/hosting category. **Only 4 of the 6
+publish real numbers.** The self-serve API vendors do:
+**Massive (formerly Polygon.io)** — Stocks Starter `$29/month`, Developer
+`$79/month`, Advanced `$199/month`
+(<https://massive.com/pricing>); **Twelve Data** — Grow `$79`, Pro `$229`,
+Ultra `$999` per month (<https://twelvedata.com/pricing>); **EODHD APIs** —
+`EOD Historical Data — All World $19.99/mo.`, `EOD+Intraday $29.99/mo.`,
+`ALL-IN-ONE Package $99.99/mo.` (<https://eodhd.com/pricing>); and
+**J-Quants API** from the Japan Exchange Group — Light ¥1,650/月, Standard
+¥3,300/月, Premium ¥16,500/月 (<https://jpx-jquants.com/>). The two
+institutional vendors this repo names as its own comparator class —
+**Bloomberg Terminal** and **LSEG Workspace (formerly Refinitiv Eikon) /
+ICE Data Services** — **publish nothing**; neither has a price page, and
+both route to a sales quote whose value depends on per-entitlement data
+licensing. Third-party aggregators report a Bloomberg terminal at
+`$31,980 per year` and LSEG Workspace at roughly `$22,000 per user per
+year`, but those are **not first-party figures and are therefore not used
+as an anchor here** — they are recorded only to show that the undisclosed
+band is an order of magnitude away, not to price against.
+
+Converting at ~¥150/$ for the assumed customer (one tenant, a small
+fintech/retail-app builder at 3–5 seats and moderate query volume), the
+**published** band is ¥3,300/月 (J-Quants Standard) to ¥34,350/月
+(Twelve Data Pro), with Massive Developer at ¥11,850/月, EODHD ALL-IN-ONE
+at ¥15,000/月 and Massive Advanced at ¥29,850/月 in between. **¥25,000/月
+sits in the upper-middle of that measured band, and deliberately not at the
+top.** It is not at the top because this actor **does not include the
+equity/commodity data licence** — for those asset classes the operator
+brings their own licensed feed, so relative to Massive/Twelve Data/EODHD
+this is a complement, not a substitute. It is not at the bottom because,
+unlike a self-serve API key, a managed tenant here carries per-tenant human
+work: tolerance and provenance checking, halt-awareness (no fresh print or
+disclosure for a halted/circuit-broken instrument without human review),
+contract-tier-scoped disclosure, and a correction/dispute channel with an
+SLA. For crypto the picture is different and stronger: this actor reads the
+four venues' own first-party public APIs plus Uniswap v3 on-chain state and
+publishes a fail-closed cross-venue median with no aggregator in the path,
+so within crypto it is a full substitute rather than a complement.
+
+**Subscribe (2026-08-10)**: a live Stripe Payment Link for the Managed
+Starter tier (¥25,000/月 flat) is available now —
+[**subscribe to Managed Market-Data Ops — Starter**](https://buy.stripe.com/4gMaEY4Un10Y9TyguueEo03).
+This is a no-code Stripe-hosted checkout; nothing in this repo's actor code
+changed. After subscribing, contact gftdcojp to arrange managed-tenant setup
+and to register the licensed feed(s) the tenant will bring (manual
+fulfillment today, no automated onboarding yet). **No fintech, desk or fleet
+operator has claimed or subscribed to this tier yet — this is a live,
+working checkout with zero paid tenants, not a claim of existing revenue.**
 
 ## Unit Economics
 
