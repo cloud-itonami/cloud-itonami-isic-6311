@@ -30,7 +30,7 @@
   Usage: `clojure -M:dev:render-html [out-file]`
   (default `docs/samples/operator-console.html`)."
   (:require [jp-go-dds.skin]
-            [clojure.string :as str]
+            [kotoba.lang.text :as str]
             [marketdata.store :as store]
             [marketdata.operation :as op]
             [langgraph.graph :as g]))

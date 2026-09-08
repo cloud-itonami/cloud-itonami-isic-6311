@@ -25,7 +25,7 @@
   `venue-ingest-request` shaper run anywhere. The JSON parsing and HTTP
   live in `marketdata.feed` (JVM-only, `:test`/`:feed` aliases), same
   zero-dep-core discipline as the ECB/EIA/FRED connectors."
-  (:require [clojure.string :as str]))
+  (:require [kotoba.lang.text :as str]))
 
 ;; ───────────────────────── venue registry ─────────────────────────────
 

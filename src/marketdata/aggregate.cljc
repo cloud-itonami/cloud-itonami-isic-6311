@@ -34,7 +34,7 @@
   Pure `.cljc`, no clock and no I/O: freshness is checked only against a
   `:now-epoch-seconds` the caller supplies, so this namespace can never
   disagree with itself between runtimes."
-  (:require [clojure.string :as str]))
+  (:require [kotoba.lang.text :as str]))
 
 (def default-opts
   {:min-venues 3
