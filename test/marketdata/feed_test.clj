@@ -15,7 +15,7 @@
       -- both APIs require a free registered key to call live, which this
       sandbox does not have; the exact field names/nesting here match the
       publicly documented schema, not an invented one."
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             [clojure.test :refer [deftest is testing]]
             [marketdata.feed :as feed]
             [marketdata.venues :as venues]))

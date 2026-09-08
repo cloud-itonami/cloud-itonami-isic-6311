@@ -43,7 +43,7 @@
   manager, `scripts/b2-creds.bb`-style) and passes the key in explicitly as
   a plain string argument. `marketdata.feed` is a pure injected-credential
   client, same discipline as this workspace's B2 credential resolution."
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             ;; JVM-only like the parsers that use it: the portable half of
             ;; this namespace (the *-ingest-request shapers, cross-rate)
             ;; has no venue-registry dependency, and a ClojureScript/nbb
@@ -116,7 +116,7 @@
          :let [rate (cross-rate eur-rates base quote)]
          :when rate]
      {:op :quote/ingest :subject instrument-id :instrument-id instrument-id
-      :price rate :currency (keyword (str/lower-case quote)) :as-of as-of
+      :price rate :currency (keyword (str/lower quote)) :as-of as-of
       :source {:class :central-bank-reference-rate
                :ref (str "ecb-fx-reference-rates:" base "/" quote ":" as-of)}})))
 

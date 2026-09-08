@@ -35,7 +35,7 @@
   well inside a float64's exponent range. `check-slot0` below independently
   re-derives the price from the pool's `tick` word and fails closed on
   disagreement, so a decode bug cannot silently reach the governor."
-  (:require [clojure.string :as str]))
+  (:require [kotoba.lang.text :as str]))
 
 ;; ───────────────────────── function selectors ─────────────────────────
 ;; keccak256("<signature>")[0..4], from the Uniswap v3 core ABI
@@ -79,7 +79,7 @@
   (when-not (string? s)
     (throw (ex-info (str "marketdata.uniswap: not a hex string: " (pr-str s))
                     {:type ::bad-hex :value s})))
-  (let [digits (if (str/starts-with? (str/lower-case s) "0x") (subs s 2) s)]
+  (let [digits (if (str/starts-with? (str/lower s) "0x") (subs s 2) s)]
     (if (str/blank? digits)
       0.0
       (reduce (fn [acc c] (+ (* acc 16.0) (digit->int c))) 0.0 digits))))
@@ -96,7 +96,7 @@
           from (* n 64)
           to   (+ from 64)]
       (when (<= to (count body))
-        (str/lower-case (subs body from to))))))
+        (str/lower (subs body from to))))))
 
 (defn- word->int24
   "Decode an ABI-encoded `int24` word (sign-extended to 32 bytes) into a

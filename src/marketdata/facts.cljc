@@ -38,7 +38,7 @@
 
   Adding coverage means adding a real, citable catalog entry or a real
   registered feed-license — never fabricating either."
-  (:require [clojure.string :as str]))
+  (:require [kotoba.lang.text :as str]))
 
 (def catalog
   "Each entry: {:id :name :asset-classes :class :access :url}. `:class` is
