@@ -1,13 +1,13 @@
 (ns marketdata.feed-demo
   "Live smoke test for `marketdata.feed` against the real ECB/EIA/FRED
-  APIs and the direct crypto venues -- NOT run by `clojure -M:dev:test`
+  APIs and the direct crypto venues -- NOT run by `kbb -M:dev:test`
   (network + real API keys required for EIA/FRED; ECB and the four CEX
   venues need no key; the Uniswap leg needs an RPC endpoint). Run
   explicitly:
 
-    clojure -M:feed:dev:run-feed
-    EIA_API_KEY=... FRED_API_KEY=... clojure -M:feed:dev:run-feed
-    ETH_RPC_URL=https://<your-node> clojure -M:feed:dev:run-feed
+    kbb -M:feed:dev:run-feed
+    EIA_API_KEY=... FRED_API_KEY=... kbb -M:feed:dev:run-feed
+    ETH_RPC_URL=https://<your-node> kbb -M:feed:dev:run-feed
 
   Reads API keys and the RPC endpoint from env HERE (the one place in this
   actor allowed to -- `marketdata.feed`/`marketdata.feed-eth` themselves

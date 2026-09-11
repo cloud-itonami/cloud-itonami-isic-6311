@@ -6,7 +6,7 @@
   **Why this is a separate `.clj` namespace and not part of
   `marketdata.feed`**: it is the only namespace here that depends on
   `kotoba-lang/org-ethereum-jsonrpc`, which this repo declares in the
-  `:feed` alias ONLY. `clojure -M:dev:test` (what CI runs, checking out
+  `:feed` alias ONLY. `kbb -M:dev:test` (what CI runs, checking out
   just langgraph/langchain) must not need that checkout, and it does not —
   nothing under `test/` requires this namespace, and all the price logic it
   would want to test is pure and lives in `marketdata.uniswap`, which has

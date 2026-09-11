@@ -105,7 +105,7 @@ compare it against.
 JSON-RPC lives in its own `.clj` namespace depending on
 `kotoba-lang/org-ethereum-jsonrpc` (whose `eth-method-whitelist` enforces
 read-only in code), declared in the **`:feed` alias only**. Nothing under
-`test/` requires it, so `clojure -M:dev:test` — what CI runs, checking out
+`test/` requires it, so `kbb -M:dev:test` — what CI runs, checking out
 only langgraph/langchain — stays offline and dependency-clean. The RPC
 endpoint is always the caller's (`ETH_RPC_URL` read by `feed-demo`), never
 a hardcoded provider.
@@ -154,8 +154,8 @@ them comes from a live venue read.
   governor (BTC 64444.31 USD, n=4, dispersion 11bp; ETH 1886.015 USD, n=4,
   8bp), with the JPY venue correctly excluded for having no declared
   conversion.
-- (+) `clojure -M:dev:test`: 95 tests / 421 assertions, 0 failures (was 46
-  / 177). `clojure -M:lint`: 0 errors, 0 warnings.
+- (+) `kbb -M:dev:test`: 95 tests / 421 assertions, 0 failures (was 46
+  / 177). `kbb -M:lint`: 0 errors, 0 warnings.
 - (+) Every published crypto price is re-derivable by the subscriber from
   its `:ref` alone.
 - (−) **Redistribution terms are the operator's problem, not this

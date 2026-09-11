@@ -11,7 +11,7 @@
     op5  データ品質の訂正申立て(どの phase でも常に人間レビュー) → escalate → approve → commit
     op6  価格が許容乖離(15%)を大幅超過(誤発注/桁間違い疑い)  → tolerance-gate REJECT → hold
 
-  Run: clojure -M:dev:run"
+  Run: kbb -M:dev:run"
   (:require [langgraph.graph :as g]
             [marketdata.store :as store]
             [marketdata.operation :as op]

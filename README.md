@@ -103,9 +103,9 @@ a correction the MarketDataGovernor would reject.
 ## Run
 
 ```bash
-clojure -M:dev:test   # governor contract · store parity · phases · facts
-clojure -M:dev:run    # 6-operation demo through one OperationActor
-clojure -M:lint
+kbb -M:dev:test   # governor contract · store parity · phases · facts
+kbb -M:dev:run    # 6-operation demo through one OperationActor
+kbb -M:lint
 ```
 
 ## Real feeds (`marketdata.feed`)
@@ -123,8 +123,8 @@ same seam as `langchain.jvm`); those deps live only in the `:test`/`:feed`
 aliases, never `:deps`.
 
 ```bash
-clojure -M:feed:dev:run-feed                                   # ECB only (no key)
-EIA_API_KEY=... FRED_API_KEY=... clojure -M:feed:dev:run-feed  # all 3
+kbb -M:feed:dev:run-feed                                   # ECB only (no key)
+EIA_API_KEY=... FRED_API_KEY=... kbb -M:feed:dev:run-feed  # all 3
 ```
 
 Equities and most commodities still require an operator-registered
@@ -175,9 +175,9 @@ launder an unsourced price past the gate.
 
 ```bash
 # CEX legs only (no key, no RPC endpoint needed)
-clojure -M:feed:dev:run-feed
+kbb -M:feed:dev:run-feed
 # with the on-chain Uniswap leg
-ETH_RPC_URL=https://<your-ethereum-node> clojure -M:feed:dev:run-feed
+ETH_RPC_URL=https://<your-ethereum-node> kbb -M:feed:dev:run-feed
 ```
 
 A real run (2026-07-26T13:23Z, all five venues live):

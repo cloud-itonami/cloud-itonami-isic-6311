@@ -103,7 +103,7 @@ euro FX reference rates、US EIA Open Data、FRED Case-Shiller HPI)+ 1つの
   market-data 固有の HARD チェックを新設し、単純な relabeling ではなく
   業態の構造的差異(桁間違い/fat-finger 耐性)を反映したことを ADR に明記
   した。
-- (+) `clojure -M:dev:test` / `clojure -M:lint` をローカルで実行し合格を
+- (+) `kbb -M:dev:test` / `kbb -M:lint` をローカルで実行し合格を
   確認済み(詳細は superproject ADR の Consequences 節)。
 - (-) R0 の自由公式ソースは3種のみ(FX/コモディティ/不動産指数の一部)。
   株式・暗号資産・大半のコモディティは operator の feed-license 登録が

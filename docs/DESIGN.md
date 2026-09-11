@@ -135,14 +135,14 @@ intake → advise → govern → decide ─┬─ commit ───────�
 `src/marketdata/report.cljk`。`render-quote` は MarketDataGovernor が承認
 した列のみを出力する。列ポリシーはコードで固定される。
 
-## 7. デモ(`clojure -M:dev:run`)
+## 7. デモ(`kbb -M:dev:run`)
 
 `src/marketdata/sim.cljk` が6操作を actor に通す(§sim.cljc docstring 参照):
 正当なECB参照レート更新 → commit、出典なしtick → hold、tier超過/未契約の開示
 → hold、取引停止銘柄への取込 → 人間承認 → commit、データ品質訂正申立て →
 常に人間承認 → commit、許容乖離を大幅超過した価格 → hold。
 
-## 8. テスト(`clojure -M:dev:test`)
+## 8. テスト(`kbb -M:dev:test`)
 
 `test/marketdata/policy_contract_test.cljk` が**ガバナンス契約を実行可能**
 にする。`test/marketdata/phase_test.cljk` が段階導入と「訂正は恒久的に人間
@@ -167,8 +167,8 @@ clojurewasm / ClojureScript / nbb 経路を汚染しない)。API キー
 `scripts/b2-creds.bb` と同じ injected-credential の作法。
 
 ```bash
-clojure -M:feed:dev:run-feed                                   # ECB のみ(無キー)
-EIA_API_KEY=... FRED_API_KEY=... clojure -M:feed:dev:run-feed  # 3種とも
+kbb -M:feed:dev:run-feed                                   # ECB のみ(無キー)
+EIA_API_KEY=... FRED_API_KEY=... kbb -M:feed:dev:run-feed  # 3種とも
 ```
 
 ## 9. 実装と業態の対応(Bloomberg/Refinitiv/ICE → market-data actor)

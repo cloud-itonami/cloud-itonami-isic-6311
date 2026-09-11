@@ -6,7 +6,7 @@
   no generator at all. This namespace drives the REAL actor stack
   (`marketdata.operation` -> `marketdata.policy` (MarketDataGovernor) ->
   `marketdata.store`) through a scenario adapted from this repo's own
-  `marketdata.sim` demo driver (`clojure -M:dev:run`, confirmed BY ACTUALLY
+  `marketdata.sim` demo driver (`kbb -M:dev:run`, confirmed BY ACTUALLY
   RUNNING IT before this file was written to produce exactly the dispositions
   its own comments claim -- unlike `cloud-itonami-isic-851`'s `schoolops.sim`,
   this repo's own sim driver uses ids that DO match `marketdata.store/
@@ -27,7 +27,7 @@
   `:tolerance-gate`/`:source-provenance-gate`/`:licensed-disclosure`, which
   would misrepresent what this scenario is meant to demonstrate.
 
-  Usage: `clojure -M:dev:render-html [out-file]`
+  Usage: `kbb -M:dev:render-html [out-file]`
   (default `docs/samples/operator-console.html`)."
   (:require [jp-go-dds.skin]
             [kotoba.lang.text :as str]
@@ -187,7 +187,7 @@
      "<main>\n"
      "  <section class=\"card\">\n"
      "    <h2>Instruments</h2>\n"
-     "    <p class=\"muted\">Demo snapshot — build-time-generated from <code>marketdata.store</code> via <code>marketdata.render-html</code> (<code>clojure -M:dev:render-html</code>), regenerated nightly.</p>\n"
+     "    <p class=\"muted\">Demo snapshot — build-time-generated from <code>marketdata.store</code> via <code>marketdata.render-html</code> (<code>kbb -M:dev:render-html</code>), regenerated nightly.</p>\n"
      "    <table>\n"
      "      <thead><tr><th>Instrument</th><th>Symbol</th><th>Asset class</th><th>Venue</th><th>Trading status</th><th>Last op status</th></tr></thead>\n"
      "      <tbody>\n"

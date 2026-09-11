@@ -21,7 +21,7 @@
   (equities, FX, commodities, crypto, real-estate indices). A phase 0→3
   staged-autonomy gate (marketdata.phase) sits on top of the governor
   and can only narrow, never widen, what the governor already allowed.
-  46 tests / 177 assertions green (`clojure -M:dev:test`), demo
-  runnable end-to-end (`clojure -M:dev:run`). This is the market-data
+  46 tests / 177 assertions green (`kbb -M:dev:test`), demo
+  runnable end-to-end (`kbb -M:dev:run`). This is the market-data
   layer cross-referenced by cloud-itonami-isic-6312's
   portal.marketdata-bridge integration."}

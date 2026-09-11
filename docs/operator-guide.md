@@ -8,8 +8,8 @@ This guide is for people who want to start an open business from
 ```bash
 git clone https://github.com/cloud-itonami/cloud-itonami-isic-6311
 cd cloud-itonami-isic-6311
-clojure -M:dev:test
-clojure -M:dev:run
+kbb -M:dev:test
+kbb -M:dev:run
 ```
 
 The default demo uses entirely fictitious instruments and prices.
@@ -34,7 +34,7 @@ citation (a real catalog source or a real, active feed-license).
   exchange/broker/vendor feeds)
 - wire the 3 free/official sources for real via `src/marketdata/feed.cljk`
   (ECB FX needs no key; EIA/FRED need a free registered API key). Run
-  `clojure -M:feed:dev:run-feed` (with `EIA_API_KEY`/`FRED_API_KEY` set) as
+  `kbb -M:feed:dev:run-feed` (with `EIA_API_KEY`/`FRED_API_KEY` set) as
   a live smoke test — it pushes each fetched quote through the real
   `OperationActor`, so a malformed/stale live response still gets caught
   by the same tolerance-gate/source-provenance-gate as any other request.
@@ -44,8 +44,8 @@ citation (a real catalog source or a real, active feed-license).
 - configure Datomic Local, kotoba-server or an equivalent durable SSoT
 - configure the LLM adapter through environment variables or secret manager
 - define subscriber contract tenants/tiers and RBAC rules
-- run `clojure -M:dev:test`
-- run `clojure -M:lint`
+- run `kbb -M:dev:test`
+- run `kbb -M:lint`
 - verify audit-ledger export
 - document backup and restore
 - document incident response
@@ -113,11 +113,11 @@ median (ADR-0002).
 
 ```bash
 # CEX legs only — no API key, no account, no aggregator
-clojure -M:feed:dev:run-feed
+kbb -M:feed:dev:run-feed
 
 # with the on-chain Uniswap leg (your node or provider URL — this repo
 # hardcodes none, and reads no credential from env inside the connector)
-ETH_RPC_URL=https://<your-ethereum-node> clojure -M:feed:dev:run-feed
+ETH_RPC_URL=https://<your-ethereum-node> kbb -M:feed:dev:run-feed
 ```
 
 ### What you must decide before selling access to it
