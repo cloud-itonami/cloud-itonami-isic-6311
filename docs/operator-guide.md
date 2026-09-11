@@ -32,7 +32,7 @@ citation (a real catalog source or a real, active feed-license).
   `marketdata.facts/catalog` honestly for free/official sources — never
   fabricate one — and register real `feed-license` records for licensed
   exchange/broker/vendor feeds)
-- wire the 3 free/official sources for real via `src/marketdata/feed.cljc`
+- wire the 3 free/official sources for real via `src/marketdata/feed.cljk`
   (ECB FX needs no key; EIA/FRED need a free registered API key). Run
   `clojure -M:feed:dev:run-feed` (with `EIA_API_KEY`/`FRED_API_KEY` set) as
   a live smoke test — it pushes each fetched quote through the real

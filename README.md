@@ -43,7 +43,7 @@ This actor **collects, holds and serves prices**. It never routes an order,
 never holds custody, never executes a trade — there is no field anywhere in
 this schema for order-routing, custody or trade execution (see
 `docs/adr/0001-architecture.md`). Ingested provenance is limited to real,
-citable public reference sources (`src/marketdata/facts.cljc`: ECB FX
+citable public reference sources (`src/marketdata/facts.cljk`: ECB FX
 reference rates, US EIA commodity spot data, FRED real-estate index), the
 crypto venues' own first-party public endpoints and on-chain pool state, a
 cross-venue median derived from those, or an operator-registered
@@ -110,7 +110,7 @@ clojure -M:lint
 
 ## Real feeds (`marketdata.feed`)
 
-`src/marketdata/feed.cljc` is the "operator wires a real feed" seam this
+`src/marketdata/feed.cljk` is the "operator wires a real feed" seam this
 README gestures at above: live HTTP connectors for the 3 free/official R0
 reference sources (plus the crypto venues covered in the next section) —
 ECB euro FX reference rates (no key), US EIA Open Data,

@@ -78,7 +78,7 @@ governor-clean かつ高確信なら auto-commit 可能、`:correction/request` 
 ### 4. R0 の正直なスコープ(捏造禁止)
 
 `dossier` の「6つの実在公開一次情報源のみ」に倣い、出典カタログ
-(`src/marketdata/facts.cljc`)は実在する3つの自由・公式参照ソース(ECB
+(`src/marketdata/facts.cljk`)は実在する3つの自由・公式参照ソース(ECB
 euro FX reference rates、US EIA Open Data、FRED Case-Shiller HPI)+ 1つの
 構造的クラス `:licensed-operator-feed`(株式/暗号資産/大半のコモディティの
 生きた気配値は、`kotoba-lang/securities` と同じ境界により、operator が
