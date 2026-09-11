@@ -35,7 +35,7 @@
   feed with its own host's XML/JSON tools can still call straight into
   these to get a `:quote/ingest`-shaped map. The JVM parse-* fns are
   unit-testable without network access
-  (test/marketdata/feed_test.clj uses real fixture payloads captured from
+  (test/marketdata/feed_test.cljk uses real fixture payloads captured from
   the live APIs, never a fabricated schema).
 
   API keys are NEVER read from env (or any secret store) inside this

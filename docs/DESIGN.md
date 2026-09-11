@@ -34,9 +34,9 @@ MarketDataSystem (root supervisor)
 ├── SeriesActor ……… 既存quoteからのOHLC系列集計投影(:series/derive)
 │
 ├── OperationActor[op] … ★ 1操作 = 1 actor run; MarketData-LLM 封じ込め ★
-│     ├── MarketData-LLM (sealed)  proposal only(src/marketdata/llm.cljc)
-│     ├── MarketDataGovernor       INDEPENDENT ゲート(src/marketdata/policy.cljc)
-│     ├── Committer                SSoT/台帳への書き込み(src/marketdata/store.cljc)
+│     ├── MarketData-LLM (sealed)  proposal only(src/marketdata/llm.cljk)
+│     ├── MarketDataGovernor       INDEPENDENT ゲート(src/marketdata/policy.cljk)
+│     ├── Committer                SSoT/台帳への書き込み(src/marketdata/store.cljk)
 │     └── Recorder                  監査台帳(append-only)
 │
 ├── ReviewActor ……… 人間レビュー(取引停止銘柄への配信・訂正申立ての interrupt を受ける)
@@ -55,7 +55,7 @@ MarketDataSystem (root supervisor)
 
 ## 3. OperationActor 内部(MarketData-LLM ラッパー)
 
-`src/marketdata/operation.cljc` の langgraph-clj StateGraph として実装。
+`src/marketdata/operation.cljk` の langgraph-clj StateGraph として実装。
 **1 run = 1 操作** — 有界で監査可能、無限内部ループを持たない。
 
 ```
@@ -89,7 +89,7 @@ intake → advise → govern → decide ─┬─ commit ───────�
 
 ## 4. MarketDataGovernor(独立検閲層)
 
-`src/marketdata/policy.cljc`。LLM とは別経路で、提案を可決/拒否/escalate に
+`src/marketdata/policy.cljk`。LLM とは別経路で、提案を可決/拒否/escalate に
 判定する。
 
 ```clojure
@@ -118,7 +118,7 @@ intake → advise → govern → decide ─┬─ commit ───────�
 
 ## 5. SSoT と監査台帳
 
-`src/marketdata/store.cljc`。dev は in-mem の EDN 事実層(本番は Datomic)。
+`src/marketdata/store.cljk`。dev は in-mem の EDN 事実層(本番は Datomic)。
 
 - **entities**: `instruments`(asset-class=equity|fx|commodity|crypto|
   real-estate-index) `quotes`(最新価格) `series`(派生系列) `feed-licenses`
@@ -132,24 +132,24 @@ intake → advise → govern → decide ─┬─ commit ───────�
 
 ## 6. 開示(governed read)
 
-`src/marketdata/report.cljc`。`render-quote` は MarketDataGovernor が承認
+`src/marketdata/report.cljk`。`render-quote` は MarketDataGovernor が承認
 した列のみを出力する。列ポリシーはコードで固定される。
 
 ## 7. デモ(`clojure -M:dev:run`)
 
-`src/marketdata/sim.cljc` が6操作を actor に通す(§sim.cljc docstring 参照):
+`src/marketdata/sim.cljk` が6操作を actor に通す(§sim.cljc docstring 参照):
 正当なECB参照レート更新 → commit、出典なしtick → hold、tier超過/未契約の開示
 → hold、取引停止銘柄への取込 → 人間承認 → commit、データ品質訂正申立て →
 常に人間承認 → commit、許容乖離を大幅超過した価格 → hold。
 
 ## 8. テスト(`clojure -M:dev:test`)
 
-`test/marketdata/policy_contract_test.clj` が**ガバナンス契約を実行可能**
-にする。`test/marketdata/phase_test.clj` が段階導入と「訂正は恒久的に人間
-専用」を保証。`test/marketdata/facts_test.clj` が出典カタログ自体の正直さ
+`test/marketdata/policy_contract_test.cljk` が**ガバナンス契約を実行可能**
+にする。`test/marketdata/phase_test.cljk` が段階導入と「訂正は恒久的に人間
+専用」を保証。`test/marketdata/facts_test.cljk` が出典カタログ自体の正直さ
 (捏造禁止)を保証。
 
-## 9. 実フィード接続(`src/marketdata/feed.cljc`)
+## 9. 実フィード接続(`src/marketdata/feed.cljk`)
 
 「operator が実フィードを配線する」という §1 で述べた前提を、実際に実装
 したのがこの namespace。R0 自由公式ソース3種(ECB FX参照レート・US EIA・

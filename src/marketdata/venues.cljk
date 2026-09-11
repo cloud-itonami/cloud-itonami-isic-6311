@@ -34,7 +34,7 @@
   published API documentation — the citable basis for the endpoint shape,
   the same discipline `marketdata.facts/catalog` applies to ECB/EIA/FRED.
   All four were called live during development (2026-07-26) and their real
-  response bodies are the fixtures in `test/marketdata/feed_test.clj`."
+  response bodies are the fixtures in `test/marketdata/feed_test.cljk`."
   [{:id :binance
     :name "Binance"
     :endpoint-doc "https://developers.binance.com/docs/binance-spot-api-docs/rest-api/market-data-endpoints"

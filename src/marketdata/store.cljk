@@ -10,7 +10,7 @@
                        by swapping `langchain.db`'s `:db-api`.
 
   Both implement the same protocol and pass the same contract
-  (test/marketdata/store_contract_test.clj) — the actor, the
+  (test/marketdata/store_contract_test.cljk) — the actor, the
   MarketDataGovernor and the audit ledger never know which SSoT they run on.
 
   Entity shapes (ADR-2607111500): an instrument (equity/fx/commodity/crypto/
