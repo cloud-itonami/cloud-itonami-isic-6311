@@ -18,9 +18,9 @@ io.github.kotoba-lang/langgraph
   :dev {:override-deps
         {io.github.kotoba-lang/langchain
          {:local/root "../../kotoba-lang/langchain"}}}
-  ;; clojure -M:dev:run  → drive the demo through one OperationActor
+  ;; kbb -M:dev:run  → drive the demo through one OperationActor
   :run {:main-opts ["-m" "marketdata.sim"]}
-  ;; clojure -M:dev:render-html → build-time docs/samples/operator-console.html
+  ;; kbb -M:dev:render-html → build-time docs/samples/operator-console.html
   :render-html {:main-opts ["-m" "marketdata.render-html"]}
   ;; http-kit/jsonista live ONLY here (not :deps) -- marketdata.feed's
   ;; live-fetch fns are JVM-only (#?(:clj ...)), same zero-dep-core
@@ -33,7 +33,7 @@ io.github.kotoba-lang/langgraph
                       metosin/jsonista  {:mvn/version "0.3.11"}}
          :main-opts ["-m" "cognitect.test-runner"]
          :exec-fn cognitect.test-runner.api/test}
-  ;; clojure -M:feed:dev:run-feed -- live smoke test against the real ECB/
+  ;; kbb -M:feed:dev:run-feed -- live smoke test against the real ECB/
   ;; EIA/FRED APIs and the direct crypto venues (needs EIA_API_KEY/
   ;; FRED_API_KEY for the first two; ECB and all four CEX venues need no
   ;; key; the Uniswap leg needs ETH_RPC_URL). Not run by :test -- see
@@ -41,7 +41,7 @@ io.github.kotoba-lang/langgraph
   ;;
   ;; org-ethereum-jsonrpc lives HERE and not in :deps or :test on purpose:
   ;; only marketdata.feed-eth (the on-chain transport) needs it, nothing
-  ;; under test/ requires that namespace, and CI's `clojure -M:dev:test`
+  ;; under test/ requires that namespace, and CI's `kbb -M:dev:test`
   ;; job only checks out langgraph/langchain -- so the test path must not
   ;; depend on a third sibling checkout. The price math it would want to
   ;; test is pure and lives in marketdata.uniswap, which has no deps.

@@ -1,6 +1,6 @@
 (ns marketdata.feed-test
   "Parsing-only tests for `marketdata.feed` -- no network access, offline
-  and CI-safe (same discipline as the rest of `clojure -M:dev:test`).
+  and CI-safe (same discipline as the rest of `kbb -M:dev:test`).
 
   Fixtures:
     - `ecb-fx-fixture` is a REAL response body, captured live via
