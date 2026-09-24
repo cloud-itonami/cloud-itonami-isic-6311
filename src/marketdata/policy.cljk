@@ -31,7 +31,7 @@
                                 → always escalate, regardless of confidence.
     7. correction requests    — a data-quality dispute NEVER auto-resolves,
                                 at any confidence, any phase."
-  (:require [clojure.set :as set]
+  (:require [kotoba.lang.coll :as set]
             [marketdata.facts :as facts]
             [marketdata.store :as store]))
 
