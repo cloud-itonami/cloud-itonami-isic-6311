@@ -2,7 +2,7 @@
   "Venue registry + the pure ingest-request shaper (ADR-2607262100).
   Parsing of the venues' real payloads lives in `marketdata.feed-test`;
   this file covers the parts that must hold with no network and no host."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [marketdata.facts :as facts]
             [marketdata.venues :as venues]))
 

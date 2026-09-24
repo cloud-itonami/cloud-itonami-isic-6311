@@ -2,7 +2,7 @@
   "The Store contract, run against BOTH backends. Proving MemStore and the
   Datomic-backed (langchain.db) store satisfy the same contract is what
   makes 'swap the SSoT for Datomic' a configuration change, not a rewrite."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [marketdata.store :as store]))
 
 (defn- backends []
