@@ -6,7 +6,7 @@
     MarketData-LLM never ingests/publishes/resolves a record the
     MarketDataGovernor would reject, and every decision (commit OR hold)
     leaves exactly one ledger fact."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [langgraph.graph :as g]
             [marketdata.store :as store]
             [marketdata.operation :as op]))

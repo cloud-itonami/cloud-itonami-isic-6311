@@ -4,7 +4,7 @@
   four venues and the Uniswap WBTC/USDC pool — so the 'happy path' test is
   a real market snapshot, and the dispersion/quorum tests perturb that same
   snapshot rather than inventing a market that never existed."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [marketdata.aggregate :as agg]))
 
 (defn- q [venue class price currency ref & [epoch]]

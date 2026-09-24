@@ -3,7 +3,7 @@
   provenance gate — these tests guard its own internal honesty (every class
   it advertises is actually backed by a catalog entry, no duplicate/
   aspirational entries)."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [marketdata.facts :as facts]))
 
 (deftest catalog-entries-are-well-formed
