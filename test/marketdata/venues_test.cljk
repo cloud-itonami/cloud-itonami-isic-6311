@@ -2,7 +2,7 @@
   "Venue registry + the pure ingest-request shaper (ADR-2607262100).
   Parsing of the venues' real payloads lives in `marketdata.feed-test`;
   this file covers the parts that must hold with no network and no host."
-  (:require [kotoba.test :refer [deftest is testing]]
+  (:require [kotoba.lang.error :as kerror] [kotoba.test :refer [deftest is testing]]
             [marketdata.facts :as facts]
             [marketdata.venues :as venues]))
 
@@ -35,7 +35,7 @@
     (doseq [{:keys [venue]} venues/listings]
       (let [u (venues/ticker-url venue "X")]
         (is (not (re-find #"coinmarketcap|coingecko|cryptocompare|nomics" u))))))
-  (is (thrown? clojure.lang.ExceptionInfo (venues/ticker-url :unknown-venue "X"))))
+  (is (thrown? kerror/ExceptionInfo (venues/ticker-url :unknown-venue "X"))))
 
 (deftest venue-ingest-request-shapes-a-governable-quote
   (let [listing (first (filter #(and (= :coinbase (:venue %))

@@ -43,7 +43,7 @@
   manager, `scripts/b2-creds.bb`-style) and passes the key in explicitly as
   a plain string argument. `marketdata.feed` is a pure injected-credential
   client, same discipline as this workspace's B2 credential resolution."
-  (:require [kotoba.lang.text :as str]
+  (:require [kotoba.bytes :as kbytes] [kotoba.lang.text :as str]
             ;; JVM-only like the parsers that use it: the portable half of
             ;; this namespace (the *-ingest-request shapers, cross-rate)
             ;; has no venue-registry dependency, and a ClojureScript/nbb
@@ -79,7 +79,7 @@
      ClojureScript/nbb caller parses the same XML with its own host's
      parser and calls `ecb-fx-ingest-requests` directly with the result."
      [xml-str]
-     (let [root (xml/parse (java.io.ByteArrayInputStream. (.getBytes ^String xml-str "UTF-8")))
+     (let [root (xml/parse (java.io.ByteArrayInputStream. (kbytes/utf8-bytes ^String xml-str)))
            outer-cube (first (filter #(= :Cube (:tag %)) (:content root)))
            day-cube   (first (filter #(= :Cube (:tag %)) (:content outer-cube)))
            as-of      (get-in day-cube [:attrs :time])
