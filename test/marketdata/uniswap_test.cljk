@@ -7,7 +7,7 @@
   1885.34 on Binance, 0.10%; BTC: 64374.96 decoded vs 64424.64 on Binance,
   0.08%) — i.e. the math below is anchored to independently observed
   reality, not just to itself."
-  (:require [kotoba.test :refer [deftest is testing]]
+  (:require [kotoba.lang.error :as kerror] [kotoba.test :refer [deftest is testing]]
             [marketdata.uniswap :as uni]))
 
 ;; Real mainnet `slot0()` result for the WETH/USDC 0.05% pool
@@ -29,7 +29,7 @@
   ;; the real sqrtPriceX96 above, decoded losslessly at float64 precision
   (is (close? (uni/hex->double "0x5a0191b0613f974f6af6b8476e4c")
               1.8255411810477756E33 1e-15))
-  (is (thrown? clojure.lang.ExceptionInfo (uni/hex->double "0xzz"))
+  (is (thrown? kerror/ExceptionInfo (uni/hex->double "0xzz"))
       "a non-hex digit throws rather than decoding to a silently wrong number"))
 
 (deftest decode-slot0-reads-sqrt-price-and-tick-from-the-real-payload

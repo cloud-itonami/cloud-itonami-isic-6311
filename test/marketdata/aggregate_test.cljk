@@ -4,7 +4,7 @@
   four venues and the Uniswap WBTC/USDC pool — so the 'happy path' test is
   a real market snapshot, and the dispersion/quorum tests perturb that same
   snapshot rather than inventing a market that never existed."
-  (:require [kotoba.test :refer [deftest is testing]]
+  (:require [kotoba.lang.error :as kerror] [kotoba.test :refer [deftest is testing]]
             [marketdata.aggregate :as agg]))
 
 (defn- q [venue class price currency ref & [epoch]]
@@ -105,7 +105,7 @@
     (is (= [:no-price] (mapv :excluded (:excluded r))))))
 
 (deftest target-currency-is-mandatory
-  (is (thrown? clojure.lang.ExceptionInfo (agg/reference-price [binance] {}))
+  (is (thrown? kerror/ExceptionInfo (agg/reference-price [binance] {}))
       "there is no default currency to silently publish in"))
 
 (deftest composite-ingest-request-enumerates-every-constituent
