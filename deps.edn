@@ -2,7 +2,7 @@
  ;; langgraph brings langchain transitively (both zero-/single-dep, all
  ;; .cljc → portable to JVM / SCI / ClojureScript / GraalVM). Both live in
  ;; the kotoba-lang org of this workspace (kotoba wasm → clojurewasm →
- ;; ClojureScript → nbb runtime priority, CLAUDE.md).
+ ;; ClojureScript → nbb runtime priority, AGENTS.md).
  :deps {
         ;; kotoba.lang.error replaced clojure.lang.ExceptionInfo here (2026-09-25).
         ;; An explicit floor: tools.deps takes the NEWEST sha it is shown.
